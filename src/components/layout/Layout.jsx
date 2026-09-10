@@ -29,7 +29,7 @@ export default function Layout() {
 
       {/* Overlay Escuro para fechar clicando fora */}
       <div 
-        className={`mobile-overlay d-md-none ${isMobileMenuOpen ? 'open' : ''}`} 
+        className={`mobile-overlay ${isMobileMenuOpen ? 'open' : ''}`} 
         onClick={closeMenu}
       ></div>
 

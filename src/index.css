@@ -184,6 +184,10 @@ button {
   .desktop-only {
     display: block !important;
   }
+
+  .mobile-overlay {
+    display: none !important;
+  }
 }
 
 /* Modal Responsivo */
