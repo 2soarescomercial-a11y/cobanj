@@ -27,13 +27,19 @@ export default function Layout() {
         </button>
       </div>
 
+      {/* Overlay Escuro para fechar clicando fora */}
+      <div 
+        className={`mobile-overlay d-md-none ${isMobileMenuOpen ? 'open' : ''}`} 
+        onClick={closeMenu}
+      ></div>
+
       {/* Sidebar */}
-      <aside 
-        className="sidebar" 
-        style={{ display: isMobileMenuOpen ? 'flex' : '' }}
-      >
+      <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <h2 style={{ color: 'var(--color-primary)' }} className="desktop-only">COBANJ</h2>
+          <h2 style={{ color: 'var(--color-primary)' }}>COBANJ</h2>
+          <button onClick={closeMenu} style={{ color: 'white' }} className="d-md-none">
+            <X size={24} />
+          </button>
         </div>
         <p style={{ fontSize: '0.875rem', color: '#9CA3AF', marginBottom: '2rem' }}>Logado como: {user?.username}</p>
         
