@@ -1,45 +1,65 @@
+import { useState } from 'react';
 import { Outlet, useNavigate, NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, LayoutDashboard, Users, DollarSign, BookOpen, CheckSquare, Book, Mic } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, DollarSign, BookOpen, CheckSquare, Book, Mic, Menu, X } from 'lucide-react';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const closeMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside style={{ width: '250px', backgroundColor: '#111827', color: 'white', padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-        <h2 style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}>COBANJ</h2>
+    <div className="layout-container">
+      {/* Botão Hamburger para Mobile */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', backgroundColor: '#111827', color: 'white' }} className="mobile-header d-md-none">
+        <h2 style={{ color: 'var(--color-primary)', margin: 0 }}>COBANJ</h2>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} style={{ color: 'white' }}>
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Sidebar */}
+      <aside 
+        className="sidebar" 
+        style={{ display: isMobileMenuOpen ? 'flex' : '' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <h2 style={{ color: 'var(--color-primary)' }} className="desktop-only">COBANJ</h2>
+        </div>
         <p style={{ fontSize: '0.875rem', color: '#9CA3AF', marginBottom: '2rem' }}>Logado como: {user?.username}</p>
         
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-          <NavLink to="/" style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
+          <NavLink to="/" onClick={closeMenu} style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
             <LayoutDashboard size={20} /> Dashboard
           </NavLink>
-          <NavLink to="/membros" style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
+          <NavLink to="/membros" onClick={closeMenu} style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
             <Users size={20} /> Membros
           </NavLink>
-          <NavLink to="/financeiro" style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
+          <NavLink to="/financeiro" onClick={closeMenu} style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
             <DollarSign size={20} /> Financeiro
           </NavLink>
-          <NavLink to="/estudos" style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
+          <NavLink to="/estudos" onClick={closeMenu} style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
             <BookOpen size={20} /> Escola & Estudos
           </NavLink>
-          <NavLink to="/biblia" style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
+          <NavLink to="/biblia" onClick={closeMenu} style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
             <Book size={20} /> Bíblia
           </NavLink>
-          <NavLink to="/tarefas" style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
+          <NavLink to="/tarefas" onClick={closeMenu} style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
             <CheckSquare size={20} /> Tarefas
           </NavLink>
-          <NavLink to="/preletor" style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
+          <NavLink to="/preletor" onClick={closeMenu} style={{ color: '#D1D5DB', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none' }}>
             <Mic size={20} /> Meu Sermão
           </NavLink>
-          <NavLink to="/culto" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none', color: '#EF4444', backgroundColor: '#FEF2F2', fontWeight: 'bold' }}>
+          <NavLink to="/culto" onClick={closeMenu} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none', color: '#EF4444', backgroundColor: '#FEF2F2', fontWeight: 'bold' }}>
             <span style={{ width: '8px', height: '8px', backgroundColor: '#EF4444', borderRadius: '50%' }} className="animate-pulse"></span> Ao Vivo
           </NavLink>
         </nav>
@@ -51,7 +71,8 @@ export default function Layout() {
           <LogOut size={20} /> Sair
         </button>
       </aside>
-      <main style={{ flex: 1, padding: '2rem', backgroundColor: 'var(--color-background)' }}>
+      
+      <main className="main-content">
         <Outlet />
       </main>
     </div>
