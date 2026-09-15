@@ -1,54 +1,90 @@
-import { useState } from 'react';
-import { UserPlus, Edit, Trash, Users, Phone, Mail, MapPin, Calendar, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { UserPlus, Edit, Trash, Users, Phone, Mail, MapPin, Calendar, X, Instagram, Camera } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function Members() {
-  const [members, setMembers] = useState([
-    { 
-      id: 1, name: 'João Silva', role: 'Diácono', branch: 'Matriz',
-      phone: '(21) 99999-9999', email: 'joao@email.com', address: 'Rua A, 123', dob: '1980-05-15'
-    },
-    { 
-      id: 2, name: 'Maria Souza', role: 'Professora', branch: 'Filial Piabetá',
-      phone: '(21) 98888-8888', email: 'maria@email.com', address: 'Av Principal, 45', dob: '1992-10-22'
-    },
-  ]);
+  const [members, setMembers] = useState([]);
+
+  const fetchMembers = async () => {
+    const { data, error } = await supabase
+      .from('members')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (data) {
+      // Mapeia has_access booleano corretamente do banco
+      setMembers(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchMembers();
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [viewingMember, setViewingMember] = useState(null);
   const [formData, setFormData] = useState({ 
     id: null, name: '', role: 'Membro', branch: 'Matriz', 
-    phone: '', email: '', address: '', dob: '',
-    hasAccess: false, username: '', password: ''
+    phone: '', email: '', address: '', dob: '', instagram: '', photo: null,
+    hasAccess: false, username: '', password: '', systemRole: 'user'
   });
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
+    
+    // Preparar os dados para salvar
+    const memberData = {
+      name: formData.name,
+      role: formData.role,
+      branch: formData.branch,
+      phone: formData.phone,
+      email: formData.email,
+      address: formData.address,
+      dob: formData.dob,
+      instagram: formData.instagram,
+      photo: formData.photo,
+      has_access: formData.hasAccess,
+      username: formData.hasAccess ? formData.username : null,
+      password: formData.hasAccess ? formData.password : null,
+      system_role: formData.hasAccess ? formData.systemRole : 'user'
+    };
+
     if (formData.id) {
-      setMembers(members.map(m => m.id === formData.id ? formData : m));
+      await supabase.from('members').update(memberData).eq('id', formData.id);
     } else {
-      setMembers([...members, { ...formData, id: Date.now() }]);
+      await supabase.from('members').insert([memberData]);
     }
+    
+    fetchMembers();
     setShowModal(false);
-    setFormData({ id: null, name: '', role: 'Membro', branch: 'Matriz', phone: '', email: '', address: '', dob: '', hasAccess: false, username: '', password: '' });
+    setFormData({ id: null, name: '', role: 'Membro', branch: 'Matriz', phone: '', email: '', address: '', dob: '', instagram: '', photo: null, hasAccess: false, username: '', password: '', systemRole: 'user' });
   };
 
   const handleEdit = (member, e) => {
     if (e) e.stopPropagation();
-    setFormData(member);
+    // Mapear snake_case do supabase para camelCase do form
+    setFormData({
+      ...member,
+      hasAccess: member.has_access || false,
+      systemRole: member.system_role || 'user',
+      username: member.username || '',
+      password: member.password || ''
+    });
     setViewingMember(null);
     setShowModal(true);
   };
 
-  const handleDelete = (id, e) => {
+  const handleDelete = async (id, e) => {
     if (e) e.stopPropagation();
     if (confirm('Tem certeza que deseja remover este membro?')) {
-      setMembers(members.filter(m => m.id !== id));
+      await supabase.from('members').delete().eq('id', id);
+      fetchMembers();
       setViewingMember(null);
     }
   };
 
   const openNewMemberModal = () => {
-    setFormData({ id: null, name: '', role: 'Membro', branch: 'Matriz', phone: '', email: '', address: '', dob: '', hasAccess: false, username: '', password: '' });
+    setFormData({ id: null, name: '', role: 'Membro', branch: 'Matriz', phone: '', email: '', address: '', dob: '', instagram: '', photo: null, hasAccess: false, username: '', password: '', systemRole: 'user' });
     setShowModal(true);
   };
 
@@ -159,6 +195,12 @@ export default function Members() {
                 <MapPin size={18} color="var(--color-text-secondary)" /> 
                 <span><strong>Endereço:</strong> {viewingMember.address || 'Não informado'}</span>
               </div>
+              {viewingMember.instagram && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-text-primary)' }}>
+                  <Instagram size={18} color="var(--color-text-secondary)" /> 
+                  <span><strong>Instagram:</strong> {viewingMember.instagram}</span>
+                </div>
+              )}
             </div>
             
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', borderTop: '1px solid var(--color-border)', paddingTop: '1rem' }}>
@@ -216,6 +258,28 @@ export default function Members() {
                 />
               </div>
 
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Instagram</label>
+                  <input 
+                    type="text" placeholder="@seu.usuario"
+                    value={formData.instagram} onChange={e => setFormData({...formData, instagram: e.target.value})}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)' }} 
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Foto de Perfil</label>
+                  <input 
+                    type="file" accept="image/*"
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) setFormData({...formData, photo: URL.createObjectURL(file)});
+                    }}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)', backgroundColor: '#fff' }} 
+                  />
+                </div>
+              </div>
+
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Endereço</label>
                 <input 
@@ -264,22 +328,35 @@ export default function Members() {
                 </label>
                 
                 {formData.hasAccess && (
-                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Usuário</label>
-                      <input 
-                        type="text" required={formData.hasAccess} placeholder="ex: joao.silva"
-                        value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})}
-                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)' }} 
-                      />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Usuário</label>
+                        <input 
+                          type="text" required={formData.hasAccess} placeholder="ex: joao.silva"
+                          value={formData.username} onChange={e => setFormData({...formData, username: e.target.value})}
+                          style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)' }} 
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Senha</label>
+                        <input 
+                          type="password" required={formData.hasAccess} placeholder="******"
+                          value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}
+                          style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)' }} 
+                        />
+                      </div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Senha</label>
-                      <input 
-                        type="password" required={formData.hasAccess} placeholder="******"
-                        value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}
-                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)' }} 
-                      />
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: 500 }}>Nível de Acesso (O que esta pessoa pode ver no sistema)</label>
+                      <select 
+                        value={formData.systemRole} onChange={e => setFormData({...formData, systemRole: e.target.value})}
+                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)' }}>
+                        <option value="user">Usuário Comum (Acesso básico)</option>
+                        <option value="editor">Editor (Gerenciar Cultos e Mídias)</option>
+                        <option value="financial">Financeiro (Acesso à Tesouraria e Dízimos)</option>
+                        <option value="admin">Administrador (Acesso Total)</option>
+                      </select>
                     </div>
                   </div>
                 )}

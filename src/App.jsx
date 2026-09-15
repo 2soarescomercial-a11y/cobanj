@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import Members from './pages/Members';
 import Login from './pages/Login';
+import PublicRegister from './pages/PublicRegister';
 import Financial from './pages/Financial';
 import Studies from './pages/Studies';
 import Bible from './pages/Bible';
@@ -27,6 +28,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<PublicRegister />} />
             
             <Route path="/" element={
               <ProtectedRoute>
