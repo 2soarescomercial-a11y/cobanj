@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Edit, Trash, Users, Phone, Mail, MapPin, Calendar, X, Instagram, Camera } from 'lucide-react';
+import { UserPlus, Edit, Trash, Users, Phone, Mail, MapPin, Calendar, X, Link as Instagram, Camera } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function Members() {

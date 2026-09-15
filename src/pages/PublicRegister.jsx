@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Camera, Instagram, CheckCircle } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Camera, Link as Instagram, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
