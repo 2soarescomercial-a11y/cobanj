@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, User } from 'lucide-react';
 
@@ -69,6 +69,22 @@ export default function Login() {
             Entrar
           </button>
         </form>
+
+        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Ainda não tem acesso?</p>
+          <Link 
+            to="/cadastro" 
+            style={{ 
+              display: 'inline-block', 
+              marginTop: '0.5rem', 
+              color: 'var(--color-primary)', 
+              fontWeight: 500,
+              textDecoration: 'none'
+            }}
+          >
+            Cadastre-se aqui
+          </Link>
+        </div>
       </div>
     </div>
   );
