@@ -5,17 +5,23 @@ const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('church_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('church_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      console.error('Erro ao ler usuário do localStorage', error);
+      localStorage.removeItem('church_user');
+      return null;
+    }
   });
 
   useEffect(() => {
-    // Apenas para garantir sincronia caso algo mude
-    const savedUser = localStorage.getItem('church_user');
-    if (!savedUser && user) {
-      setUser(null);
+    if (user) {
+      localStorage.setItem('church_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('church_user');
     }
-  }, []);
+  }, [user]);
 
   const login = async (username, password) => {
     try {
