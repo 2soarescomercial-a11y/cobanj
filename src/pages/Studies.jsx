@@ -68,14 +68,21 @@ export default function Studies() {
       questions: questionsToSave
     };
 
+    let result;
     if (currentStudy.id) {
-      await supabase.from('studies').update(studyData).eq('id', currentStudy.id);
+      result = await supabase.from('studies').update(studyData).eq('id', currentStudy.id);
     } else {
-      await supabase.from('studies').insert([studyData]);
+      result = await supabase.from('studies').insert([studyData]);
     }
     
-    fetchStudies();
-    setIsEditing(false);
+    if (result.error) {
+      console.error(result.error);
+      alert('Erro ao salvar o estudo. Detalhes no console.');
+    } else {
+      alert('Estudo salvo com sucesso!');
+      fetchStudies();
+      setIsEditing(false);
+    }
   };
 
   const handleDelete = async (id) => {
