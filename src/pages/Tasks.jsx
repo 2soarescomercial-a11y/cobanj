@@ -1,28 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, CheckCircle, Circle, Trash, Edit, User, MapPin } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState([
-    { id: 1, title: 'Ligar e testar som', assignee: 'Equipe de Som', branch: 'Matriz', completed: true },
-    { id: 2, title: 'Limpeza do salão', assignee: 'Diaconato', branch: 'Filial Piabetá', completed: false },
-  ]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ id: null, title: '', assignee: '', branch: 'Matriz' });
+  const [filterBranch, setFilterBranch] = useState('');
 
-  const handleRegister = (e) => {
+  const fetchTasks = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (data) setTasks(data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (formData.id) {
-      setTasks(tasks.map(t => t.id === formData.id ? { ...t, ...formData } : t));
+      await supabase.from('tasks').update({
+        title: formData.title,
+        assignee: formData.assignee,
+        branch: formData.branch
+      }).eq('id', formData.id);
     } else {
-      setTasks([...tasks, { ...formData, id: Date.now(), completed: false }]);
+      await supabase.from('tasks').insert([{
+        title: formData.title,
+        assignee: formData.assignee,
+        branch: formData.branch,
+        completed: false
+      }]);
     }
+    fetchTasks();
     setShowModal(false);
     setFormData({ id: null, title: '', assignee: '', branch: 'Matriz' });
   };
 
-  const toggleTask = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  const toggleTask = async (id, currentStatus) => {
+    // Optimistic update
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !currentStatus } : t));
+    await supabase.from('tasks').update({ completed: !currentStatus }).eq('id', id);
+    fetchTasks();
   };
 
   const handleEdit = (task) => {
@@ -30,9 +58,10 @@ export default function Tasks() {
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm('Deseja excluir esta tarefa?')) {
-      setTasks(tasks.filter(t => t.id !== id));
+      await supabase.from('tasks').delete().eq('id', id);
+      fetchTasks();
     }
   };
 
@@ -41,6 +70,7 @@ export default function Tasks() {
     setShowModal(true);
   };
 
+  const filteredTasks = filterBranch ? tasks.filter(t => t.branch === filterBranch) : tasks;
   const pendingTasks = tasks.filter(t => !t.completed).length;
 
   return (
@@ -80,18 +110,23 @@ export default function Tasks() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h3 style={{ margin: 0 }}>Lista de Afazeres</h3>
-          <select style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)' }}>
+          <select 
+            value={filterBranch}
+            onChange={e => setFilterBranch(e.target.value)}
+            style={{ padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--color-border)' }}>
             <option value="">Todas as Filiais</option>
             <option value="Matriz">Matriz</option>
             <option value="Filial Piabeta">Filial Piabetá</option>
           </select>
         </div>
         
-        {tasks.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>Nenhuma tarefa cadastrada no momento.</p>
+        {loading ? (
+          <p style={{ color: 'var(--color-text-secondary)' }}>Carregando tarefas...</p>
+        ) : filteredTasks.length === 0 ? (
+          <p style={{ color: 'var(--color-text-secondary)' }}>Nenhuma tarefa encontrada.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {tasks.map(task => (
+            {filteredTasks.map(task => (
               <div key={task.id} style={{ 
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
                 padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '0.5rem',
@@ -99,7 +134,7 @@ export default function Tasks() {
                 opacity: task.completed ? 0.7 : 1
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <button onClick={() => toggleTask(task.id)} style={{ padding: '0.25rem' }}>
+                  <button onClick={() => toggleTask(task.id, task.completed)} style={{ padding: '0.25rem', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {task.completed ? (
                       <CheckCircle size={24} color="#10B981" />
                     ) : (
@@ -121,10 +156,10 @@ export default function Tasks() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => handleEdit(task)} style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem' }}>
+                  <button onClick={() => handleEdit(task)} style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }}>
                     <Edit size={18} />
                   </button>
-                  <button onClick={() => handleDelete(task.id)} style={{ color: '#DC2626', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem' }}>
+                  <button onClick={() => handleDelete(task.id)} style={{ color: '#DC2626', display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem', background: 'none', border: 'none', cursor: 'pointer' }}>
                     <Trash size={18} />
                   </button>
                 </div>
@@ -182,7 +217,7 @@ export default function Tasks() {
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                <button type="button" onClick={() => setShowModal(false)} style={{ padding: '0.5rem 1rem', color: 'var(--color-text-secondary)' }}>Cancelar</button>
+                <button type="button" onClick={() => setShowModal(false)} style={{ padding: '0.5rem 1rem', color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancelar</button>
                 <button type="submit" className="btn-primary">{formData.id ? 'Salvar Alterações' : 'Salvar Tarefa'}</button>
               </div>
             </form>
@@ -192,3 +227,4 @@ export default function Tasks() {
     </div>
   );
 }
+

@@ -1,24 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLive } from '../context/LiveContext';
 import { useAuth } from '../context/AuthContext';
 import { Book, Edit, MonitorPlay, Plus, Trash, Radio, Search, Save, ChevronLeft, CalendarX, Mic } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function PreacherPanel() {
   const { user } = useAuth();
   const { publishToLive } = useLive();
   
-  const [sermons, setSermons] = useState([
-    {
-      id: 1,
-      title: 'O Amor de Deus',
-      date: '2026-09-08',
-      blocks: [
-        { id: 1, type: 'text', content: 'Introdução:\nHoje vamos falar sobre a grandiosidade do amor de Deus por nós, pecadores.' },
-        { id: 2, type: 'verse', reference: 'João 3:16', text: 'Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.' },
-        { id: 3, type: 'text', content: 'Desenvolvimento:\nA salvação é um dom gratuito. Não depende de nós, mas exclusivamente de Cristo.' }
-      ]
-    }
-  ]);
+  const [sermons, setSermons] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [currentSermon, setCurrentSermon] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -29,7 +20,30 @@ export default function PreacherPanel() {
   const [errorVerse, setErrorVerse] = useState('');
 
   // Simulação de banco de dados: verificando se o usuário logado está na escala de hoje.
-  const isScheduledForToday = user?.role === 'Pastor' || user?.role === 'Master' || user?.username === 'master';
+  const isScheduledForToday = user?.system_role === 'admin' || user?.system_role === 'master' || user?.system_role === 'editor';
+
+  const fetchSermons = async () => {
+    setLoading(true);
+    // Para sermões, podemos filtrar pelo autor logado ou mostrar todos se for admin
+    let query = supabase.from('sermons').select('*').order('date', { ascending: false });
+    
+    if (user?.system_role !== 'master' && user?.system_role !== 'admin' && user?.username) {
+       query = query.eq('author', user.username);
+    }
+    
+    const { data, error } = await query;
+    if (data) {
+      setSermons(data.map(s => ({
+        ...s,
+        blocks: s.content ? JSON.parse(s.content) : []
+      })));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchSermons();
+  }, [user]);
 
   const handleCreateNew = () => {
     setCurrentSermon({
@@ -47,18 +61,28 @@ export default function PreacherPanel() {
     setIsPreaching(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (currentSermon.id) {
-      setSermons(sermons.map(s => s.id === currentSermon.id ? { ...currentSermon, date: s.date } : s));
+      await supabase.from('sermons').update({
+        title: currentSermon.title,
+        content: JSON.stringify(currentSermon.blocks)
+      }).eq('id', currentSermon.id);
     } else {
-      setSermons([{ ...currentSermon, id: Date.now(), date: new Date().toISOString().split('T')[0] }, ...sermons]);
+      await supabase.from('sermons').insert([{
+        title: currentSermon.title,
+        content: JSON.stringify(currentSermon.blocks),
+        author: user?.username || user?.name || 'Autor Desconhecido',
+        date: new Date().toISOString()
+      }]);
     }
+    fetchSermons();
     setIsEditing(false);
   };
 
-  const handleDeleteSermon = (id) => {
+  const handleDeleteSermon = async (id) => {
     if (confirm('Tem certeza que deseja excluir este sermão do seu histórico?')) {
-      setSermons(sermons.filter(s => s.id !== id));
+      await supabase.from('sermons').delete().eq('id', id);
+      fetchSermons();
     }
   };
 
@@ -184,7 +208,7 @@ export default function PreacherPanel() {
     return (
       <div className="container" style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '3rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <button onClick={() => { setIsEditing(false); setCurrentSermon(null); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-secondary)' }}>
+          <button onClick={() => { setIsEditing(false); setCurrentSermon(null); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>
             <ChevronLeft size={24} /> Voltar para o Histórico
           </button>
           
@@ -245,7 +269,7 @@ export default function PreacherPanel() {
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', backgroundColor: '#F3F4F6', padding: '1rem', borderRadius: '0.5rem' }}>
-          <button onClick={handleAddTextBlock} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: 'white', border: '1px solid var(--color-border)', borderRadius: '0.375rem', fontWeight: 500 }}>
+          <button onClick={handleAddTextBlock} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: 'white', border: '1px solid var(--color-border)', borderRadius: '0.375rem', fontWeight: 500, cursor: 'pointer' }}>
             <Plus size={18} /> Novo Texto
           </button>
           
@@ -283,44 +307,51 @@ export default function PreacherPanel() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        {sermons.map(sermon => (
-          <div key={sermon.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, color: 'var(--color-primary)' }}>{sermon.title}</h3>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={() => handleEditSermon(sermon)} style={{ color: 'var(--color-text-secondary)' }} title="Editar">
-                  <Edit size={20} />
-                </button>
-                <button onClick={() => handleDeleteSermon(sermon.id)} style={{ color: '#F87171' }} title="Excluir">
-                  <Trash size={20} />
+      {loading ? (
+         <p style={{ color: 'var(--color-text-secondary)', textAlign: 'center', padding: '2rem 0' }}>Carregando sermões...</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            {sermons.map(sermon => (
+              <div key={sermon.id} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, color: 'var(--color-primary)' }}>{sermon.title}</h3>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={() => handleEditSermon(sermon)} style={{ color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }} title="Editar">
+                      <Edit size={20} />
+                    </button>
+                    <button onClick={() => handleDeleteSermon(sermon.id)} style={{ color: '#F87171', background: 'none', border: 'none', cursor: 'pointer' }} title="Excluir">
+                      <Trash size={20} />
+                    </button>
+                  </div>
+                </div>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem', flex: 1 }}>
+                  Última atualização: {new Date(sermon.date).toLocaleDateString()}
+                  {sermon.author && <span style={{ display: 'block', marginTop: '0.25rem' }}>Por: {sermon.author}</span>}
+                </p>
+                <button 
+                  onClick={() => {
+                    setCurrentSermon(sermon);
+                    setIsPreaching(true);
+                  }}
+                  className="btn-primary" 
+                  style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', backgroundColor: isScheduledForToday ? 'var(--color-primary)' : '#9CA3AF' }}
+                  title={isScheduledForToday ? "Iniciar Pregação" : "Você não está na escala de hoje"}
+                >
+                  {isScheduledForToday ? <MonitorPlay size={20} /> : <CalendarX size={20} />}
+                  {isScheduledForToday ? "Modo Pregação" : "Pregação Bloqueada"}
                 </button>
               </div>
+            ))}
+          </div>
+          {sermons.length === 0 && (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', backgroundColor: 'var(--color-background)', borderRadius: '0.5rem', border: '1px dashed var(--color-border)' }}>
+              <Mic size={48} color="var(--color-text-secondary)" style={{ marginBottom: '1rem', opacity: 0.5 }} />
+              <p style={{ color: 'var(--color-text-secondary)' }}>Você ainda não criou nenhum sermão.</p>
             </div>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem', flex: 1 }}>
-              Última atualização: {new Date(sermon.date).toLocaleDateString()}
-            </p>
-            <button 
-              onClick={() => {
-                setCurrentSermon(sermon);
-                setIsPreaching(true);
-              }}
-              className="btn-primary" 
-              style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', backgroundColor: isScheduledForToday ? 'var(--color-primary)' : '#9CA3AF' }}
-              title={isScheduledForToday ? "Iniciar Pregação" : "Você não está na escala de hoje"}
-            >
-              {isScheduledForToday ? <MonitorPlay size={20} /> : <CalendarX size={20} />}
-              {isScheduledForToday ? "Modo Pregação" : "Pregação Bloqueada"}
-            </button>
-          </div>
-        ))}
-        {sermons.length === 0 && (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', backgroundColor: 'var(--color-background)', borderRadius: '0.5rem', border: '1px dashed var(--color-border)' }}>
-            <Mic size={48} color="var(--color-text-secondary)" style={{ marginBottom: '1rem', opacity: 0.5 }} />
-            <p style={{ color: 'var(--color-text-secondary)' }}>Você ainda não criou nenhum sermão.</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

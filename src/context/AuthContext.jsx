@@ -4,13 +4,16 @@ import { supabase } from '../lib/supabase';
 const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('church_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
   useEffect(() => {
-    // Verifica se há sessão salva ao carregar a página
+    // Apenas para garantir sincronia caso algo mude
     const savedUser = localStorage.getItem('church_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    if (!savedUser && user) {
+      setUser(null);
     }
   }, []);
 
